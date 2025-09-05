@@ -1,0 +1,8 @@
+flask
+transformers
+torch
+torchvision
+torchaudio
+flask-cors
+requests
+gunicorn
