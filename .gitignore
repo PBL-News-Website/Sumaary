@@ -1,3 +1,38 @@
-venv/
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.so
 *.dll
 *.lib
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Local testing and deployment files
+test_local.py
+DEPLOYMENT_CHECKLIST.md
+Procfile_new
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Model cache (optional - uncomment if models are large)
+# .cache/
+# models/

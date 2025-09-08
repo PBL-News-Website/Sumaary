@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import logging
+import torch
 
 app = Flask(__name__)
 CORS(app)
@@ -11,9 +12,16 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Load model and tokenizer once when the app starts
-logger.info("Loading BART model...")
-tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large-cnn")
-model = AutoModelForSeq2SeqLM.from_pretrained("facebook/bart-large-cnn")
+logger.info("Loading lightweight summarization model...")
+# Using a lighter model for faster deployment
+MODEL_NAME = "sshleifer/distilbart-cnn-12-6"  # Smaller, faster version of BART
+
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+model = AutoModelForSeq2SeqLM.from_pretrained(
+    MODEL_NAME,
+    low_cpu_mem_usage=True,
+    torch_dtype=torch.float32  # Use float32 for CPU
+)
 logger.info("Model loaded successfully!")
 
 @app.route('/health', methods=['GET'])
@@ -36,23 +44,26 @@ def summarize_text():
         
         logger.info(f"Summarizing text of length: {len(text)}")
         
-        # Tokenize input with truncation and max_length
+        # Tokenize input with truncation and optimized length
         inputs = tokenizer(
             text, 
             return_tensors="pt", 
-            max_length=1024,   # BART limit
-            truncation=True
+            max_length=512,   # Reduced from 1024 for faster processing
+            truncation=True,
+            padding=False
         )
         
-        # Generate summary
-        summary_ids = model.generate(
-            inputs["input_ids"], 
-            max_length=data.get('max_length', 130),  # Allow customization
-            min_length=data.get('min_length', 30),   # Allow customization
-            length_penalty=2.0,
-            num_beams=4, 
-            early_stopping=True
-        )
+        # Generate summary with optimized parameters
+        with torch.no_grad():  # Disable gradient computation for inference
+            summary_ids = model.generate(
+                inputs["input_ids"], 
+                max_length=data.get('max_length', 100),  # Reduced default
+                min_length=data.get('min_length', 20),   # Reduced default
+                length_penalty=1.5,  # Slightly reduced
+                num_beams=2,  # Reduced from 4 for faster inference
+                early_stopping=True,
+                do_sample=False  # Deterministic output
+            )
         
         # Decode the summary
         summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
@@ -88,18 +99,21 @@ def batch_summarize():
             inputs = tokenizer(
                 text, 
                 return_tensors="pt", 
-                max_length=1024,
-                truncation=True
+                max_length=512,  # Optimized
+                truncation=True,
+                padding=False
             )
             
-            summary_ids = model.generate(
-                inputs["input_ids"], 
-                max_length=data.get('max_length', 130),
-                min_length=data.get('min_length', 30),
-                length_penalty=2.0,
-                num_beams=4, 
-                early_stopping=True
-            )
+            with torch.no_grad():
+                summary_ids = model.generate(
+                    inputs["input_ids"], 
+                    max_length=data.get('max_length', 100),  # Optimized default
+                    min_length=data.get('min_length', 20),   # Optimized default
+                    length_penalty=1.5,  # Optimized
+                    num_beams=2,     # Optimized for speed
+                    early_stopping=True,
+                    do_sample=False
+                )
             
             summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
             summaries.append(summary)

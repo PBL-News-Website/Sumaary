@@ -1,6 +1,15 @@
-flask
-transformers
-torch
-flask-cors
-requests
-gunicorn
+# Core web framework
+flask==2.3.3
+flask-cors==4.0.0
+gunicorn==21.2.0
+
+# HTTP requests
+requests==2.31.0
+
+# ML libraries (optimized for CPU)
+transformers==4.35.2
+torch==2.1.0+cpu --find-links https://download.pytorch.org/whl/torch_stable.html
+
+# Optional: For even lighter deployment, uncomment these
+# accelerate==0.24.1
+# optimum==1.14.1
